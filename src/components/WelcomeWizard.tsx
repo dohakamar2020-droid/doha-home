@@ -177,7 +177,7 @@ export function WelcomeWizard() {
                 {orderedWeekdays(0).map((day) => (
                   <label
                     key={day}
-                    className={`flex min-h-[44px] cursor-pointer items-center justify-center rounded-xl border text-xs font-semibold transition-colors ${
+                    className={`flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-colors ${
                       weekStartsOn === day
                         ? "border-sage-500 bg-sage-50 text-sage-800"
                         : "border-sage-200 bg-white text-ink-soft hover:bg-sage-50"
@@ -189,7 +189,7 @@ export function WelcomeWizard() {
                       value={day}
                       checked={weekStartsOn === day}
                       onChange={() => setWeekStartsOn(day)}
-                      className="sr-only"
+                      className="h-4 w-4 shrink-0 accent-sage-600"
                     />
                     {WEEKDAY_LABELS[day]}
                   </label>

@@ -223,7 +223,7 @@ export function TaskForm({
             {PRIORITIES.map((priority) => (
               <label
                 key={priority.value}
-                className={`flex min-h-[44px] cursor-pointer items-center justify-center rounded-xl border px-2 text-xs font-semibold transition-colors ${
+                className={`flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-colors ${
                   values.priority === priority.value
                     ? "border-sage-500 bg-sage-50 text-sage-800"
                     : "border-sage-200 bg-white text-ink-soft hover:bg-sage-50"
@@ -235,7 +235,7 @@ export function TaskForm({
                   value={priority.value}
                   checked={values.priority === priority.value}
                   onChange={() => setField("priority", priority.value as Priority)}
-                  className="sr-only"
+                  className="h-4 w-4 shrink-0 accent-sage-600"
                 />
                 {PRIORITY_LABELS[priority.value]}
               </label>
@@ -249,7 +249,7 @@ export function TaskForm({
             {RECURRENCE_OPTIONS.map((option) => (
               <label
                 key={option.value}
-                className={`flex min-h-[52px] cursor-pointer flex-col justify-center rounded-xl border px-2.5 py-1.5 text-xs transition-colors ${
+                className={`flex min-h-[52px] cursor-pointer items-start gap-2 rounded-xl border px-2.5 py-1.5 text-xs transition-colors ${
                   values.recurrenceType === option.value
                     ? "border-sage-500 bg-sage-50 text-sage-800"
                     : "border-sage-200 bg-white text-ink-soft hover:bg-sage-50"
@@ -270,10 +270,12 @@ export function TaskForm({
                       setField("dayOfMonth", String(Number(values.date.slice(8, 10))));
                     }
                   }}
-                  className="sr-only"
+                  className="mt-1 h-4 w-4 shrink-0 accent-sage-600"
                 />
-                <span className="font-bold">{option.label}</span>
-                <span className="mt-0.5 text-[10px] leading-4">{option.hint}</span>
+                <span className="flex flex-col">
+                  <span className="font-bold">{option.label}</span>
+                  <span className="mt-0.5 text-[10px] leading-4">{option.hint}</span>
+                </span>
               </label>
             ))}
           </div>
