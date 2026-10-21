@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="بيتي منظم">
+  <rect width="64" height="64" rx="16" fill="#FAF7F2"/>
+  <path d="M12 30.5 32 14l20 16.5V50a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V30.5Z" fill="#719B83"/>
+  <path d="M25 54V38h14v16" fill="#F5E5E8"/>
+  <path d="M40 22.5V16h5v11.5" fill="#28332D"/>
+  <circle cx="44" cy="40" r="4" fill="#F5E5E8"/>
+</svg>
