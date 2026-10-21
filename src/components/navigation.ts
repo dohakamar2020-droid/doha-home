@@ -1,10 +1,12 @@
 import {
+  BookOpen,
   CalendarCheck,
   CalendarRange,
   HeartPulse,
   LayoutDashboard,
   SprayCan,
   Settings,
+  UtensilsCrossed,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { SectionId } from "@/types/domain";
@@ -22,6 +24,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/week", label: "الأسبوع", icon: CalendarRange, section: "week" },
   { href: "/cleaning", label: "التنظيف", icon: SprayCan, section: "cleaning" },
   { href: "/habits", label: "عاداتي", icon: HeartPulse, section: "habits" },
+  { href: "/meals", label: "غدا الأسبوع", icon: UtensilsCrossed, section: "meals" },
+  { href: "/adhkar", label: "أذكاري", icon: BookOpen, section: "adhkar" },
   { href: "/settings", label: "الإعدادات", icon: Settings, section: "settings" },
 ] as const;
 

@@ -161,9 +161,13 @@ describe("الإعداد والتصفير", () => {
     };
     const onboarded = completeOnboarding(data, settings);
     expect(onboarded.settings.onboardingCompleted).toBe(true);
-    expect(onboarded.tasks).toHaveLength(1);
+    // المهمة الأصلية + مهام خطة البيت (عبادة الفجر، أذكار الصباح، أذكار المساء، قيام الليل)
+    expect(onboarded.tasks).toHaveLength(1 + 4);
+    expect(onboarded.tasks.some((task) => task.planKey === "v2-qiyam")).toBe(true);
+    expect(onboarded.settings.housePlanVersion).toBeGreaterThan(0);
+    // إكمال الإعداد تاني مش بيزوّد مهام
     const again = completeOnboarding(onboarded, { ...settings, displayName: "تاني" });
-    expect(again.tasks).toHaveLength(1);
+    expect(again.tasks).toHaveLength(1 + 4);
     expect(again.settings.displayName).toBe("تاني");
   });
 

@@ -7,6 +7,7 @@ import {
   Database,
   Download,
   HardDrive,
+  Home,
   Info,
   Moon,
   RotateCcw,
@@ -29,8 +30,9 @@ import {
 import type { BackupFile, BackupSummary } from "@/lib/backup";
 import { APP_SECTIONS, SECTION_LABELS, WEEKDAY_LABELS } from "@/types/domain";
 import type { SectionId, Weekday } from "@/types/domain";
-import { orderedWeekdays } from "@/lib/date";
-import { updateSettings } from "@/lib/operations";
+import { orderedWeekdays, todayIso } from "@/lib/date";
+import { reapplyHousePlan, updateSettings } from "@/lib/operations";
+import { describeHousePlan } from "@/data/housePlan";
 import { APP_VERSION } from "@/lib/defaults";
 
 interface PendingImport {
@@ -239,6 +241,36 @@ export function SettingsView() {
           ) : null}
         </div>
       </form>
+
+      <section className="card space-y-3" aria-labelledby="plan-title">
+        <h2 id="plan-title" className="flex items-center gap-2 text-sm font-bold text-ink">
+          <Home className="h-4 w-4 text-sage-600" aria-hidden="true" />
+          خطة البيت
+        </h2>
+        <ul className="space-y-1.5">
+          {describeHousePlan().map((line) => (
+            <li key={line} className="flex items-start gap-2 text-xs leading-6 text-ink-soft">
+              <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-sage-600" aria-hidden="true" />
+              {line}
+            </li>
+          ))}
+        </ul>
+        <p className="text-[11px] leading-6 text-ink-soft">
+          الخطة دي اتضافت مرة واحدة لبيتك، وكل مهمة فيها تقدرِ تعدّلها أو تحذفها عادي.
+          لو حذفتِ حاجة من الخطة وعايزة ترجّعيها، اضغطي الزر ده وهيضيف الناقص بس.
+        </p>
+        <button
+          type="button"
+          className="btn-secondary btn-sm self-start"
+          onClick={() => {
+            update((current) => reapplyHousePlan(current, todayIso()));
+            notify("رجّعنا مهام الخطة الناقصة ✅");
+          }}
+        >
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+          رجّعي مهام الخطة الناقصة
+        </button>
+      </section>
 
       <section className="card space-y-4" aria-labelledby="data-title">
         <h2 id="data-title" className="flex items-center gap-2 text-sm font-bold text-ink">

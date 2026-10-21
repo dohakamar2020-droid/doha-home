@@ -7,7 +7,7 @@ import {
   parseStoredData,
   saveData,
 } from "@/lib/storage";
-import { createEmptyData, DEFAULT_SETTINGS } from "@/lib/defaults";
+import { createEmptyData, DATA_VERSION, DEFAULT_SETTINGS } from "@/lib/defaults";
 import { addTask } from "@/lib/operations";
 
 describe("خدمة التخزين", () => {
@@ -43,7 +43,11 @@ describe("خدمة التخزين", () => {
   });
 
   it("يرفض البيانات الغلط في المخطط", () => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, tasks: "wrong" }));
+    // version 2 = الشكل الحالي، فمفيش ترحيل يصلّح البيانات الغلط
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: 2, settings: "مش إعدادات", meals: 5 }),
+    );
     const result = loadData();
     expect(result.status).toBe("corrupted");
     if (result.status === "corrupted") {
@@ -56,10 +60,51 @@ describe("خدمة التخزين", () => {
     const migrated = migrateRawData(legacy);
     expect(migrated.ok).toBe(true);
     if (migrated.ok) {
-      const data = migrated.data as { version: number; settings: { weekStartsOn: number } };
-      expect(data.version).toBe(1);
+      const data = migrated.data as {
+        version: number;
+        settings: { weekStartsOn: number; housePlanVersion: number };
+        meals: unknown[];
+        adhkarProgress: unknown[];
+      };
+      expect(data.version).toBe(DATA_VERSION);
       expect(migrated.migrated).toBe(true);
       expect(data.settings.weekStartsOn).toBe(DEFAULT_SETTINGS.weekStartsOn);
+      expect(Array.isArray(data.meals)).toBe(true);
+      expect(Array.isArray(data.adhkarProgress)).toBe(true);
+    }
+  });
+
+  it("يرحّل نسخة 1 القديمة لـ 2 ويضيف الوجبات والأذكار", () => {
+    const legacy = {
+      version: 1,
+      settings: {
+        displayName: "دعاء",
+        onboardingCompleted: true,
+        visibleSections: ["dashboard", "today", "week", "cleaning", "habits"],
+      },
+      tasks: [],
+      taskCompletions: [],
+      rooms: [],
+      cleaningTasks: [],
+      cleaningCompletions: [],
+      habits: [],
+      habitCompletions: [],
+    };
+    const migrated = migrateRawData(legacy);
+    expect(migrated.ok).toBe(true);
+    if (migrated.ok) {
+      const data = migrated.data as {
+        version: number;
+        meals: { title: string }[];
+        settings: { housePlanVersion: number };
+        cleaningTasks: { planKey?: string }[];
+      };
+      expect(data.version).toBe(DATA_VERSION);
+      // اقتراحات الغدا الافتراضية (21 أكلة على الأسبوع)
+      expect(data.meals.length).toBeGreaterThanOrEqual(21);
+      // خطة البيت اتطبقت: فيه تنظيف بخطة ومهام عبادة
+      expect(data.settings.housePlanVersion).toBeGreaterThan(0);
+      expect(data.cleaningTasks.some((task) => task.planKey === "v2-daily-tidy")).toBe(true);
     }
   });
 

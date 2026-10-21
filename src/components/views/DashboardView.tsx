@@ -4,9 +4,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  BookOpen,
   CalendarCheck,
   CalendarRange,
   CheckCircle2,
+  ChefHat,
   Clock,
   HeartPulse,
   Moon,
@@ -37,6 +39,8 @@ import {
   updateTask,
 } from "@/lib/operations";
 import { isHabitCompleted } from "@/lib/habits";
+import { mealForDate } from "@/lib/meals";
+import { adhkarDaySummary } from "@/lib/adhkar";
 import { SECTION_LABELS } from "@/types/domain";
 import type { IsoDate, Task, TaskInput } from "@/types/domain";
 
@@ -45,6 +49,8 @@ const SECTION_CARDS = [
   { href: "/week", label: SECTION_LABELS.week, icon: CalendarRange, hint: "نظرة على الأسبوع" },
   { href: "/cleaning", label: SECTION_LABELS.cleaning, icon: SprayCan, hint: "تنظيف الغرف" },
   { href: "/habits", label: SECTION_LABELS.habits, icon: HeartPulse, hint: "عاداتك اليومية" },
+  { href: "/meals", label: SECTION_LABELS.meals, icon: ChefHat, hint: "اقتراحات الغدا" },
+  { href: "/adhkar", label: SECTION_LABELS.adhkar, icon: BookOpen, hint: "أذكار الصبح والمساء" },
 ] as const;
 
 export function DashboardView() {
@@ -67,6 +73,8 @@ export function DashboardView() {
     const habitsDone = habitsToday.filter((habit) =>
       isHabitCompleted(data.habitCompletions, habit.id, today),
     ).length;
+    const meal = mealForDate(data.meals, today);
+    const adhkar = adhkarDaySummary(data.adhkarProgress, today);
     return {
       todayTasks,
       progress,
@@ -74,6 +82,8 @@ export function DashboardView() {
       cleaningToday,
       habitsToday,
       habitsDone,
+      meal,
+      adhkar,
       hasAnyTasks: data.tasks.length > 0,
     };
   }, [data, today, currentTime]);
@@ -251,6 +261,69 @@ export function DashboardView() {
           )}
         </section>
 
+        <section className="card" aria-labelledby="meals-today-title">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 id="meals-today-title" className="flex items-center gap-2 text-sm font-bold">
+              <ChefHat className="h-4 w-4 text-sage-600" aria-hidden="true" />
+              غدا النهاردة
+            </h2>
+            <Link href="/meals" className="btn-ghost btn-sm">
+              الأسبوع كله
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+          {view.meal ? (
+            <>
+              <p className="text-sm font-bold text-ink">{view.meal.title}</p>
+              {view.meal.notes ? (
+                <p className="mt-1 text-[11px] leading-5 text-ink-soft">{view.meal.notes}</p>
+              ) : null}
+            </>
+          ) : (
+            <p className="rounded-xl bg-sage-50 px-3 py-4 text-center text-xs text-ink-soft">
+              مفيش اقتراح غدا للنهاردة — ضيفي واحد من «غدا الأسبوع».
+            </p>
+          )}
+        </section>
+
+        <section className="card" aria-labelledby="adhkar-today-title">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 id="adhkar-today-title" className="flex items-center gap-2 text-sm font-bold">
+              <BookOpen className="h-4 w-4 text-sage-600" aria-hidden="true" />
+              أذكار النهاردة
+            </h2>
+            <Link href="/adhkar" className="btn-ghost btn-sm">
+              العدّاد
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+          <ul className="space-y-2">
+            {(
+              [
+                { key: "morning", label: "أذكار الصباح" },
+                { key: "evening", label: "أذكار المساء" },
+              ] as const
+            ).map((entry) => {
+              const item = view.adhkar[entry.key];
+              return (
+                <li
+                  key={entry.key}
+                  className="flex items-center justify-between rounded-xl border border-sage-100 px-3 py-2 text-xs"
+                >
+                  <span className="font-semibold text-ink">{entry.label}</span>
+                  <span
+                    className={`font-bold ${
+                      item.completed === item.total ? "text-sage-700" : "text-ink-soft"
+                    }`}
+                  >
+                    {item.completed} من {item.total}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
         <section className="card" aria-labelledby="habits-today-title">
           <div className="mb-3 flex items-center justify-between">
             <h2 id="habits-today-title" className="flex items-center gap-2 text-sm font-bold">
@@ -314,7 +387,7 @@ export function DashboardView() {
         <h2 id="quick-nav-title" className="mb-2 text-sm font-bold text-ink">
           روحي على طول
         </h2>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {SECTION_CARDS.map((card) => {
             const Icon = card.icon;
             return (

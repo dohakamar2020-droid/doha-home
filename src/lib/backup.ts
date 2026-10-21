@@ -1,5 +1,6 @@
 import type { AppData } from "@/types/domain";
 import { BACKUP_APP_ID, BACKUP_VERSION, backupSchema, formatZodError } from "@/lib/schemas";
+import { migrateRawData } from "@/lib/storage";
 import type { BackupFile } from "@/lib/schemas";
 
 export type { BackupFile } from "@/lib/schemas";
@@ -33,6 +34,14 @@ export function parseBackup(text: string): ParseBackupResult {
     parsed && typeof parsed === "object" && "data" in parsed
       ? parsed
       : { app: BACKUP_APP_ID, backupVersion: 1, exportedAt: new Date().toISOString(), data: parsed };
+
+  // النسخ القديمة (data.version = 1) بتمر على نفس ترحيل التخزين قبل التحقق
+  const rawData = (candidate as { data?: unknown }).data;
+  if (rawData && typeof rawData === "object") {
+    const migrated = migrateRawData(rawData);
+    if (!migrated.ok) return { ok: false, message: migrated.message };
+    (candidate as { data: unknown }).data = migrated.data;
+  }
 
   const result = backupSchema.safeParse(candidate);
   if (!result.success) {

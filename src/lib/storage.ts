@@ -1,9 +1,12 @@
 import type { AppData } from "@/types/domain";
 import { appDataSchema, formatZodError } from "@/lib/schemas";
-import { DEFAULT_SETTINGS, createEmptyData } from "@/lib/defaults";
+import { DEFAULT_SETTINGS, createEmptyData, DATA_VERSION } from "@/lib/defaults";
+import { applyHousePlan } from "@/data/housePlan";
+import { buildDefaultMeals } from "@/data/meals";
+import { todayIso } from "@/lib/date";
 
 export const STORAGE_KEY = "bayti-monazam:data";
-export const STORAGE_VERSION = 1;
+export const STORAGE_VERSION = DATA_VERSION;
 
 export type LoadResult =
   | { status: "ok"; data: AppData; migrated: boolean }
@@ -57,6 +60,50 @@ const migrations: Record<number, (data: RawData) => RawData> = {
       habits: Array.isArray(raw.habits) ? raw.habits : [],
       habitCompletions: Array.isArray(raw.habitCompletions) ? raw.habitCompletions : [],
     };
+  },
+  /**
+   * الإصدار 2: اقتراحات الغدا + عدّاد الأذكار + تطبيق خطة البيت
+   * (عبادة الفجر، قيام الليل، ترويق يومي، تنظيف عميق يومي لأوضة،
+   *  تنظيف شامل التلات، وغسيل مرتين في الأسبوع).
+   * التطبيق بيحوّل مهام التنظيف الافتراضية بدل ما يكررها.
+   */
+  2: (raw) => {
+    const now = new Date().toISOString();
+    const settings = (raw.settings && typeof raw.settings === "object" ? raw.settings : {}) as
+      Record<string, unknown>;
+    const rawTasks = Array.isArray(raw.tasks) ? raw.tasks : [];
+    const rawCleaning = Array.isArray(raw.cleaningTasks) ? raw.cleaningTasks : [];
+    const rawRooms = Array.isArray(raw.rooms) ? raw.rooms : [];
+
+    const candidate = {
+      version: 2,
+      settings: {
+        ...DEFAULT_SETTINGS,
+        ...settings,
+        housePlanVersion:
+          typeof settings.housePlanVersion === "number" ? settings.housePlanVersion : 0,
+      },
+      tasks: rawTasks,
+      taskCompletions: Array.isArray(raw.taskCompletions) ? raw.taskCompletions : [],
+      rooms: rawRooms,
+      cleaningTasks: rawCleaning,
+      cleaningCompletions: Array.isArray(raw.cleaningCompletions)
+        ? raw.cleaningCompletions
+        : [],
+      habits: Array.isArray(raw.habits) ? raw.habits : [],
+      habitCompletions: Array.isArray(raw.habitCompletions) ? raw.habitCompletions : [],
+      meals:
+        Array.isArray(raw.meals) && raw.meals.length > 0 ? raw.meals : buildDefaultMeals(now),
+      adhkarProgress: Array.isArray(raw.adhkarProgress) ? raw.adhkarProgress : [],
+    } as unknown as AppData;
+
+    // خطة البيت بتتطبّق بس لو المستخدمة خلّصت الإعداد (عندها بيانات فعلية)
+    if (!candidate.settings.onboardingCompleted) return candidate as unknown as RawData;
+    try {
+      return applyHousePlan(candidate, todayIso()) as unknown as RawData;
+    } catch {
+      return candidate as unknown as RawData;
+    }
   },
 };
 

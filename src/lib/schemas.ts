@@ -76,7 +76,10 @@ export const userSettingsSchema = z.object({
   weekStartsOn: weekdaySchema,
   routineTemplate: z.enum(["calm", "balanced", "busy"]),
   onboardingCompleted: z.boolean(),
-  visibleSections: z.array(z.enum(["dashboard", "today", "week", "cleaning", "habits"])),
+  visibleSections: z.array(
+    z.enum(["dashboard", "today", "week", "cleaning", "habits", "meals", "adhkar"]),
+  ),
+  housePlanVersion: z.number().int().min(0).default(0),
   createdAt: isoDateTimeSchema.optional(),
 });
 
@@ -89,6 +92,7 @@ export const taskSchema = z.object({
   startTime: timeSchema.nullable().optional(),
   durationMinutes: z.number().int().min(5).max(720).nullable().optional(),
   recurrence: recurrenceSchema,
+  planKey: z.string().max(60).optional(),
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema.optional(),
 });
@@ -117,6 +121,7 @@ export const cleaningTaskSchema = z.object({
   weekday: weekdaySchema.nullable().optional(),
   dayOfMonth: z.number().int().min(1).max(31).nullable().optional(),
   startDate: isoDateSchema,
+  planKey: z.string().max(60).optional(),
   createdAt: isoDateTimeSchema,
 });
 
@@ -142,8 +147,28 @@ export const habitCompletionSchema = z.object({
   completedAt: isoDateTimeSchema,
 });
 
+export const mealIdeaSchema = z.object({
+  id: z.string().min(1),
+  weekday: weekdaySchema,
+  title: z.string().trim().min(1, "اكتبي اسم الأكلة").max(120),
+  notes: z.string().max(300).optional(),
+  createdAt: isoDateTimeSchema,
+});
+
+export const adhkarPeriodSchema = z.enum(["morning", "evening"]);
+export type AdhkarPeriod = z.infer<typeof adhkarPeriodSchema>;
+
+export const adhkarProgressSchema = z.object({
+  id: z.string().min(1),
+  itemId: z.string().min(1),
+  period: adhkarPeriodSchema,
+  date: isoDateSchema,
+  count: z.number().int().min(0).max(1000),
+  updatedAt: isoDateTimeSchema,
+});
+
 export const appDataSchema = z.object({
-  version: z.literal(1),
+  version: z.literal(2),
   settings: userSettingsSchema,
   tasks: z.array(taskSchema),
   taskCompletions: z.array(taskCompletionSchema),
@@ -152,6 +177,8 @@ export const appDataSchema = z.object({
   cleaningCompletions: z.array(cleaningCompletionSchema),
   habits: z.array(habitSchema),
   habitCompletions: z.array(habitCompletionSchema),
+  meals: z.array(mealIdeaSchema),
+  adhkarProgress: z.array(adhkarProgressSchema),
 });
 
 export const BACKUP_APP_ID = "bayti-monazam";

@@ -1,17 +1,21 @@
 import type {
+  AdhkarPeriod,
   AppData,
   CleaningFrequency,
   CleaningTaskInput,
   HabitInput,
   IsoDate,
+  MealIdeaInput,
   Room,
   Task,
   TaskInput,
   UserSettings,
+  Weekday,
 } from "@/types/domain";
 import { createId } from "@/lib/id";
 import { addDays, isAfter, isBefore, maxDate, todayIso } from "@/lib/date";
 import { DEFAULT_SETTINGS, createEmptyData } from "@/lib/defaults";
+import { applyHousePlan } from "@/data/housePlan";
 
 /** كل الدوال هنا نقية: ترجع نسخة جديدة من البيانات بدون تعديل الأصل */
 
@@ -153,10 +157,12 @@ export function completeOnboarding(
   if (data.settings.onboardingCompleted) {
     return { ...data, settings: { ...data.settings, ...settings, onboardingCompleted: true } };
   }
-  return {
+  const onboarded: AppData = {
     ...data,
     settings: { ...data.settings, ...settings, onboardingCompleted: true, createdAt: nowIso() },
   };
+  // خطة البيت (عبادة + تنظيف + غسيل + غدا) تتطبق مرة واحدة أول ما الإعداد يخلص
+  return applyHousePlan(onboarded, todayIso());
 }
 
 // ---------------------------------------------------------------------------
@@ -383,4 +389,150 @@ export function lastCleaningCompletionDate(
     .filter((completion) => completion.cleaningTaskId === cleaningTaskId)
     .map((completion) => completion.date);
   return dates.length > 0 ? maxDate(...dates) : null;
+}
+
+// ---------------------------------------------------------------------------
+// اقتراحات الغدا
+// ---------------------------------------------------------------------------
+
+export function addMealIdea(
+  data: AppData,
+  input: MealIdeaInput,
+): { data: AppData; id: string } {
+  const id = createId();
+  return {
+    id,
+    data: {
+      ...data,
+      meals: [
+        ...data.meals,
+        {
+          id,
+          weekday: input.weekday,
+          title: input.title.trim(),
+          notes: input.notes?.trim() || undefined,
+          createdAt: nowIso(),
+        },
+      ],
+    },
+  };
+}
+
+export function updateMealIdea(data: AppData, mealId: string, input: MealIdeaInput): AppData {
+  return {
+    ...data,
+    meals: data.meals.map((meal) =>
+      meal.id === mealId
+        ? {
+            ...meal,
+            weekday: input.weekday,
+            title: input.title.trim(),
+            notes: input.notes?.trim() || undefined,
+          }
+        : meal,
+    ),
+  };
+}
+
+export function deleteMealIdea(data: AppData, mealId: string): AppData {
+  return { ...data, meals: data.meals.filter((meal) => meal.id !== mealId) };
+}
+
+/**
+ * «بدّلي» — تنقل الاقتراح الأساسي لآخر اليوم وتخلّي اللي بعده أساسي.
+ * بتغيّر ترتيب نفس الأيام بس، بدون حذف أي اقتراح.
+ */
+export function rotateMealIdea(data: AppData, weekday: Weekday): AppData {
+  const dayMeals = data.meals.filter((meal) => meal.weekday === weekday);
+  if (dayMeals.length < 2) return data;
+  const first = dayMeals[0];
+  if (!first) return data;
+  const others = data.meals.filter((meal) => meal.id !== first.id);
+  const lastIndex = others.map((meal) => meal.weekday).lastIndexOf(weekday);
+  const next = others.slice();
+  next.splice(lastIndex + 1, 0, first);
+  return { ...data, meals: next };
+}
+
+// ---------------------------------------------------------------------------
+// عدّاد الأذكار
+// ---------------------------------------------------------------------------
+
+export function getAdhkarCount(
+  data: AppData,
+  itemId: string,
+  date: IsoDate,
+): number {
+  return (
+    data.adhkarProgress.find((entry) => entry.itemId === itemId && entry.date === date)?.count ?? 0
+  );
+}
+
+export function setAdhkarCount(
+  data: AppData,
+  input: { itemId: string; period: AdhkarPeriod; date: IsoDate },
+  count: number,
+): AppData {
+  const safeCount = Math.max(0, Math.min(1000, Math.round(count)));
+  const existing = data.adhkarProgress.find(
+    (entry) => entry.itemId === input.itemId && entry.date === input.date,
+  );
+  if (safeCount === 0) {
+    return data.adhkarProgress.some(
+      (entry) => entry.itemId === input.itemId && entry.date === input.date,
+    )
+      ? {
+          ...data,
+          adhkarProgress: data.adhkarProgress.filter(
+            (entry) => !(entry.itemId === input.itemId && entry.date === input.date),
+          ),
+        }
+      : data;
+  }
+  if (existing) {
+    return {
+      ...data,
+      adhkarProgress: data.adhkarProgress.map((entry) =>
+        entry.id === existing.id ? { ...entry, count: safeCount, updatedAt: nowIso() } : entry,
+      ),
+    };
+  }
+  return {
+    ...data,
+    adhkarProgress: [
+      ...data.adhkarProgress,
+      {
+        id: createId(),
+        itemId: input.itemId,
+        period: input.period,
+        date: input.date,
+        count: safeCount,
+        updatedAt: nowIso(),
+      },
+    ],
+  };
+}
+
+export function incrementAdhkar(
+  data: AppData,
+  input: { itemId: string; period: AdhkarPeriod; date: IsoDate; step: number; target: number },
+): AppData {
+  const current = getAdhkarCount(data, input.itemId, input.date);
+  const next = Math.min(input.target, current + input.step);
+  return setAdhkarCount(data, input, next);
+}
+
+export function resetAdhkar(
+  data: AppData,
+  input: { itemId: string; period: AdhkarPeriod; date: IsoDate },
+): AppData {
+  return setAdhkarCount(data, input, 0);
+}
+
+/** يطبّق خطة البيت يدويًا (زر «إعادة تطبيق الخطة» في الإعدادات) */
+export function reapplyHousePlan(data: AppData, today: IsoDate): AppData {
+  return applyHousePlan(
+    { ...data, settings: { ...data.settings, housePlanVersion: 0 } },
+    today,
+  );
 }
