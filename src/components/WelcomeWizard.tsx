@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Moon, Sun, Sparkles } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
@@ -35,8 +35,15 @@ export function WelcomeWizard() {
   const [weekStartsOn, setWeekStartsOn] = useState<Weekday>(6);
   const [template, setTemplate] = useState<RoutineTemplate>("balanced");
   const starterPreview = useMemo(() => buildStarterBundle(template, today), [template, today]);
+  const alreadyOnboarded = Boolean(data?.settings.onboardingCompleted);
+
+  // لو الإعداد خلص قبل كده، مفيش داعي نعرض الويزارد تاني
+  useEffect(() => {
+    if (status === "ready" && alreadyOnboarded) router.replace("/");
+  }, [status, alreadyOnboarded, router]);
 
   if (status === "loading" || !data) return <LoadingState label="بنجهّز أول خطوة…" />;
+  if (alreadyOnboarded) return <LoadingState label="رجوعك للرئيسية…" />;
 
   const totalSteps = STEP_TITLES.length;
   const isLast = step === totalSteps - 1;

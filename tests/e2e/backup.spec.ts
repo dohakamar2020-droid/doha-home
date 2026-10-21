@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { dailyTask, seed } from "./helpers";
+import { dailyTask, readStored, seed } from "./helpers";
 
 test.describe("النسخ الاحتياطي", () => {
   test("تصدير البيانات ثم استيرادها من جديد", async ({ page }) => {
@@ -18,8 +18,7 @@ test.describe("النسخ الاحتياطي", () => {
     const filePath = await download.path();
     expect(filePath).toBeTruthy();
 
-    const content = await page.evaluate(() => window.localStorage.getItem("bayti-monazam:data"));
-    expect(content).toContain("task-daily");
+    await expect.poll(async () => (await readStored(page))?.tasks.length ?? 0).toBe(1);
 
     await page.locator('input[type="file"]').setInputFiles(filePath!);
     const preview = page.getByRole("dialog");
@@ -27,8 +26,9 @@ test.describe("النسخ الاحتياطي", () => {
     await preview.getByRole("button", { name: "استبدال البيانات" }).click();
 
     await expect(page.getByText("البيانات اتنقلت من النسخة الاحتياطية")).toBeVisible();
-    const after = await page.evaluate(() => window.localStorage.getItem("bayti-monazam:data"));
-    expect(after).toContain("تجهيز الغدا");
+    await expect
+      .poll(async () => (await readStored(page))?.tasks.some((task) => task.title === "تجهيز الغدا"))
+      .toBe(true);
   });
 
   test("ملف غير صالح بيترفض برسالة واضحة", async ({ page }) => {
@@ -41,8 +41,8 @@ test.describe("النسخ الاحتياطي", () => {
 
     await page.locator('input[type="file"]').setInputFiles(invalidPath);
     await expect(page.getByRole("alert").filter({ hasText: "غير صالحة" })).toBeVisible();
-    const stored = await page.evaluate(() => window.localStorage.getItem("bayti-monazam:data"));
-    expect(stored).toContain("تجهيز الغدا");
+    const stored = await readStored(page);
+    expect(stored?.tasks.length).toBe(1);
   });
 
   test("تصفير التطبيق بعد تأكيد صريح", async ({ page }) => {
@@ -55,7 +55,6 @@ test.describe("النسخ الاحتياطي", () => {
     await dialog.getByRole("button", { name: "أيوه، امسحي كل حاجة" }).click();
 
     await page.waitForURL(/\/welcome$/);
-    const stored = await page.evaluate(() => window.localStorage.getItem("bayti-monazam:data"));
-    expect(JSON.parse(stored ?? "{}").tasks).toHaveLength(0);
+    await expect.poll(async () => (await readStored(page))?.tasks.length ?? -1).toBe(0);
   });
 });

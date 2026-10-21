@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { dailyTask, seed, todayInCairo, weekdayIndex } from "./helpers";
+import { dailyTask, readStored, seed, todayInCairo, weekdayIndex } from "./helpers";
 
 test.describe("المهام اليومية", () => {
   test("إضافة مهمة ثم إكمالها والحفاظ عليها بعد إعادة التحميل", async ({ page }) => {
@@ -21,6 +21,9 @@ test.describe("المهام اليومية", () => {
 
     await checkbox.click();
     await expect(checkbox).toHaveAttribute("aria-checked", "true");
+
+    // نتأكد إن الحفظ المحلي خلص قبل إعادة التحميل
+    await expect.poll(async () => (await readStored(page))?.taskCompletions.length ?? 0).toBe(1);
 
     await page.reload();
     const afterReload = page.getByRole("checkbox", { name: "مكالمة مع ماما" });

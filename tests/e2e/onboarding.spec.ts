@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readStored } from "./helpers";
 
 test.describe("الإعداد الأول", () => {
   test("يمشي في الويزارد ويوصل للرئيسية ويحفظ الإعداد", async ({ page }) => {
@@ -19,7 +20,7 @@ test.describe("الإعداد الأول", () => {
     await expect(page.getByText("أهلًا منى!")).toBeVisible();
     await page.getByRole("button", { name: "يلا نبدأ" }).click();
 
-    await page.waitForURL("/");
+    await page.waitForURL((url) => url.pathname === "/");
     await expect(page.getByRole("heading", { name: /منى/ })).toBeVisible();
 
     // إعادة التحميل لازم تفضل على الرئيسية مش الويزارد
@@ -27,13 +28,17 @@ test.describe("الإعداد الأول", () => {
     await expect(page.getByRole("heading", { name: /منى/ })).toBeVisible();
     await expect(page).toHaveURL(/\/$/);
 
-    const stored = await page.evaluate(() => window.localStorage.getItem("bayti-monazam:data"));
-    expect(stored).toContain("onboardingCompleted");
-    const parsed = JSON.parse(stored ?? "{}");
-    expect(parsed.settings.onboardingCompleted).toBe(true);
-    expect(parsed.settings.displayName).toBe("منى");
-    expect(parsed.settings.weekStartsOn).toBe(5);
-    expect(parsed.tasks.length).toBeGreaterThan(0);
+    await expect
+      .poll(async () => {
+        const stored = await readStored(page);
+        return stored ? stored.tasks.length : 0;
+      })
+      .toBeGreaterThan(0);
+
+    const parsed = await readStored(page);
+    expect(parsed?.settings.onboardingCompleted).toBe(true);
+    expect(parsed?.settings.displayName).toBe("منى");
+    expect(parsed?.settings.weekStartsOn).toBe(5);
   });
 
   test("الرجوع للويزارد بعد الإعداد مايمسحش البيانات", async ({ page }) => {
@@ -43,14 +48,14 @@ test.describe("الإعداد الأول", () => {
       await page.getByRole("button", { name: "اللي بعده" }).click();
     }
     await page.getByRole("button", { name: "يلا نبدأ" }).click();
-    await page.waitForURL("/");
+    await page.waitForURL((url) => url.pathname === "/");
 
-    const before = await page.evaluate(() => window.localStorage.getItem("bayti-monazam:data"));
+    const before = await readStored(page);
 
     await page.goto("/welcome");
     await expect(page).toHaveURL(/\/$/);
 
-    const after = await page.evaluate(() => window.localStorage.getItem("bayti-monazam:data"));
-    expect(JSON.parse(after ?? "{}").tasks.length).toBe(JSON.parse(before ?? "{}").tasks.length);
+    const after = await readStored(page);
+    expect(after?.tasks.length).toBe(before?.tasks.length);
   });
 });

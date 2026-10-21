@@ -61,9 +61,14 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
+        id: e2e
         run: npm run test:e2e
         env:
           CI: "true"
+
+      - name: Publish E2E failures as annotations
+        if: ${{ failure() }}
+        run: node scripts/report-e2e-failures.cjs playwright-report/report.json
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

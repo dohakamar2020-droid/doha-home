@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { habitEveryDay, seed, todayInCairo } from "./helpers";
+import { habitEveryDay, readStored, seed, todayInCairo } from "./helpers";
 
 test.describe("تنظيف البيت", () => {
   test("إكمال مهمة تنظيف مستحقة النهاردة والحفاظ عليها", async ({ page }) => {
@@ -12,16 +12,19 @@ test.describe("تنظيف البيت", () => {
     await checkbox.click();
     await expect(checkbox).toHaveAttribute("aria-checked", "true");
 
+    await expect
+      .poll(async () => (await readStored(page))?.cleaningCompletions.length ?? 0)
+      .toBe(1);
+
     await page.reload();
     await expect(page.getByRole("checkbox", { name: /مسح أسطح المطبخ/ }).first()).toHaveAttribute(
       "aria-checked",
       "true",
     );
 
-    const stored = await page.evaluate(() => window.localStorage.getItem("bayti-monazam:data"));
-    const parsed = JSON.parse(stored ?? "{}");
-    expect(parsed.cleaningCompletions).toHaveLength(1);
-    expect(parsed.cleaningCompletions[0].date).toBe(todayInCairo());
+    const stored = await readStored(page);
+    expect(stored?.cleaningCompletions).toHaveLength(1);
+    expect(stored?.cleaningCompletions[0]?.date).toBe(todayInCairo());
   });
 
   test("إضافة غرفة جديدة ومهمة تنظيف ليها", async ({ page }) => {
@@ -53,6 +56,10 @@ test.describe("العادات", () => {
     await expect(page.getByText("1 يوم متتالية")).toBeVisible();
     await expect(page.getByRole("button", { name: "اتعملت النهاردة" })).toBeVisible();
 
+    await expect
+      .poll(async () => (await readStored(page))?.habitCompletions.length ?? 0)
+      .toBe(1);
+
     await page.reload();
     await expect(page.getByRole("button", { name: "اتعملت النهاردة" })).toBeVisible();
     await expect(page.getByText("1 يوم متتالية")).toBeVisible();
@@ -67,7 +74,6 @@ test.describe("العادات", () => {
     await dialog.getByRole("button", { name: "إضافة العادة" }).click();
 
     await expect(page.getByRole("heading", { name: "قراءة صفحتين" })).toBeVisible();
-    const stored = await page.evaluate(() => window.localStorage.getItem("bayti-monazam:data"));
-    expect(JSON.parse(stored ?? "{}").habits).toHaveLength(1);
+    await expect.poll(async () => (await readStored(page))?.habits.length ?? 0).toBe(1);
   });
 });

@@ -69,14 +69,42 @@ export function buildSeed(options: SeedOptions = {}) {
   };
 }
 
+/**
+ * يزرع بيانات البداية مرة واحدة فقط لكل سياق اختبار.
+ * مهم: لو السكربت كتب كل مرة، كان هيمسح أي تعديل بعد إعادة تحميل الصفحة
+ * وده كان هيخلي اختبارات الثبات (persistence) تفشل زورًا.
+ */
 export async function seed(page: Page, options: SeedOptions = {}): Promise<void> {
   const data = buildSeed(options);
   await page.addInitScript(
     ([key, payload]) => {
-      window.localStorage.setItem(key as string, payload as string);
+      if (window.localStorage.getItem(key as string) === null) {
+        window.localStorage.setItem(key as string, payload as string);
+      }
     },
     [STORAGE_KEY, JSON.stringify(data)] as const,
   );
+}
+
+export interface StoredShape {
+  settings: {
+    displayName: string;
+    onboardingCompleted: boolean;
+    weekStartsOn: number;
+    visibleSections: string[];
+  };
+  tasks: Array<{ id: string; title: string }>;
+  taskCompletions: Array<{ taskId: string; date: string }>;
+  cleaningCompletions: Array<{ cleaningTaskId: string; date: string }>;
+  habits: Array<{ id: string; name: string }>;
+  habitCompletions: Array<{ habitId: string; date: string }>;
+}
+
+/** يقرأ البيانات المحفوظة فعليًا في المتصفح */
+export async function readStored(page: Page): Promise<StoredShape | null> {
+  const raw = await page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY);
+  if (!raw) return null;
+  return JSON.parse(raw) as StoredShape;
 }
 
 export function dailyTask(overrides: Record<string, unknown> = {}) {

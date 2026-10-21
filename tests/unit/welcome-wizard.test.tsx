@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WelcomeWizard } from "@/components/WelcomeWizard";
 import { StoreProvider } from "@/context/StoreContext";
@@ -19,6 +19,24 @@ vi.mock("next/navigation", () => ({
 function stored(): AppData {
   return JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}") as AppData;
 }
+
+/** بيانات فيها إعداد مكتمل ومهمة واحدة موجودة */
+function seededOnboardedData(): AppData {
+  const base = createEmptyData();
+  return addTask(
+    { ...base, settings: { ...base.settings, onboardingCompleted: true, displayName: "دعاء" } },
+    {
+      title: "مهمة قديمة",
+      category: "home",
+      priority: "medium",
+      recurrence: { type: "once", date: todayIso() },
+    },
+  ).data;
+}
+
+beforeEach(() => {
+  replace.mockClear();
+});
 
 describe("ويزارد الإعداد الأول", () => {
   it("بيكمّل الخطوات وبيحفظ الإعداد مع قالب البداية", async () => {
@@ -53,35 +71,23 @@ describe("ويزارد الإعداد الأول", () => {
     expect(data.rooms).toHaveLength(6);
   });
 
-  it("إعادة الإعداد ما بتمسحش المهام الموجودة", async () => {
-    const base = createEmptyData();
-    const existing = addTask(
-      { ...base, settings: { ...base.settings, onboardingCompleted: true } },
-      {
-        title: "مهمة قديمة",
-        category: "home",
-        priority: "medium",
-        recurrence: { type: "once", date: todayIso() },
-      },
-    ).data;
+  it("لو الإعداد مكتمل بيرجّع للرئيسية من غير ما يلمس البيانات", async () => {
+    const existing = seededOnboardedData();
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
 
-    const user = userEvent.setup();
     render(
       <StoreProvider>
         <WelcomeWizard />
       </StoreProvider>,
     );
 
-    await screen.findByText("أهلًا بيكي");
-    for (let step = 0; step < 3; step += 1) {
-      await user.click(screen.getByRole("button", { name: "اللي بعده" }));
-    }
-    await user.click(screen.getByRole("button", { name: "يلا نبدأ" }));
+    await screen.findByText("رجوعك للرئيسية…");
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/"));
 
     const data = stored();
     expect(data.tasks).toHaveLength(1);
     expect(data.tasks[0]?.title).toBe("مهمة قديمة");
-    expect(data.settings.onboardingCompleted).toBe(true);
+    expect(data.settings.displayName).toBe("دعاء");
+    expect(screen.queryByText("أهلًا بيكي")).not.toBeInTheDocument();
   });
 });
