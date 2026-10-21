@@ -3,7 +3,7 @@ import { APP_SECTIONS } from "@/types/domain";
 import { buildDefaultCleaningTasks, createDefaultRooms } from "@/data/templates";
 import { todayIso } from "@/lib/date";
 
-export const APP_VERSION = "1.0.0";
+export const APP_VERSION = "1.0.1";
 
 export const DEFAULT_SETTINGS: UserSettings = {
   displayName: "",

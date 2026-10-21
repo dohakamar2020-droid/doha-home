@@ -3,7 +3,7 @@
 تطبيق ويب عربي (RTL) لتنظيم يوم البيت: مهام يومية وأسبوعية، جدول تنظيف الغرف، عادات يومية، ونسخ احتياطي محلي.
 كل البيانات تُحفظ في متصفح المستخدمة فقط — بدون سيرفر، بدون قاعدة بيانات، وبدون أي طلبات خارجية.
 
-> **App name:** بيتي منظم (Bayti Monazam) · **Version:** 1.0.0
+> **App name:** بيتي منظم (Bayti Monazam) · **Version:** 1.0.1
 
 ---
 
@@ -41,16 +41,17 @@
 | --- | --- |
 | Node.js | **22.x** (مسموح `>=20.9 <25`، موثّق في `package.json > engines`) |
 | npm | 10.x |
-| Next.js (App Router) | 15.5.4 |
-| React / React DOM | 19.1.1 |
+| Next.js (App Router) | 15.5.28 (مُصحَّحة أمنيًا — انظر [الأمان والتبعيات](#الأمان-والتبعيات)) |
+| React / React DOM | 19.1.10 |
 | TypeScript (strict) | 5.9.2 |
 | Tailwind CSS | 3.4.17 |
 | Zod | 3.25.76 |
 | Lucide React | 0.468.0 |
+| PostCSS | 8.5.31 (override لكل الشجرة) |
 | خط Cairo | `@fontsource/cairo` 5.2.6 (محلي، بدون CDN) |
-| Vitest + Testing Library | 3.2.4 / 16.x |
-| Playwright | 1.54.1 |
-| ESLint | 9 (flat config، `eslint-config-next`) |
+| Vitest + Testing Library | 5.0.5 / 16.x |
+| Playwright | 1.64.1 |
+| ESLint | 9.39.5 (flat config، `eslint-config-next` 15.5.28) |
 
 لا يوجد Supabase / Firebase / قاعدة بيانات / مصادقة / واجهات برمجية خارجية / خدمات مدفوعة.
 جميع الصفحات **static** (SSG) — لا يوجد أي API route ولا Server Actions ولا جلسات على السيرفر.
@@ -279,6 +280,32 @@ npm run test:e2e  # Playwright: 17 حالة × مشروعين (mobile + desktop)
 
 - **quality:** `actions/setup-node@v4` مع Node 22 وذاكرة npm → `npm ci` → `npm run lint` → `npm run typecheck` → `npm test` → `npm run build`.
 - **e2e:** يعتمد على quality → `npx playwright install --with-deps chromium` → `npm run test:e2e` (webServer يبني ويشغّل التطبيق)، ويرفع تقرير Playwright عند الفشل.
+
+## الأمان والتبعيات
+
+**CVE-2025-66478 / CVE-2025-55182 (React2Shell).** الإصدار الأول من التطبيق كان على `next@15.5.4` و`react@19.1.1`، وVercel أوقف نشر البناء بسبب النسخة المصابة. تم الترقية إلى:
+
+| الحزمة | من | إلى | السبب |
+| --- | --- | --- | --- |
+| `next` | 15.5.4 | **15.5.28** | آخر إصدار مُصحَّح في خط 15.5 (يغطي CVE-2025-66478 وأحدث تنبيهات 15.x) |
+| `react` / `react-dom` | 19.1.1 | **19.1.10** | نسخة React مُصحَّحة لحزمة RSC |
+| `eslint-config-next` | 15.5.4 | **15.5.28** | متوافق مع Next |
+| `sharp` (داخل Next) | 0.34.5 | **0.35.5** (`overrides`) | إصلاح تنبيهات libvips/libheif/librsvg |
+| `postcss` | 8.5.3 (+8.4.31 داخل Next) | **8.5.31** (`overrides`) | إصلاح GHSA-6g55-p6wh-862q وGHSA-r28c-9q8g-f849 |
+| `vitest` | 3.2.4 | **5.0.5** | إزالة tinypool المصاب (RCE) |
+| `@playwright/test` | 1.54.1 | **1.64.1** | تنبيهات playwright عالية الخطورة |
+| `eslint` | 9.22.0 | **9.39.5** | إصدار مدعوم + إصلاح `@eslint/plugin-kit` |
+
+**نتيجة `npm audit` بعد الترقية:** `0 critical`، وكل التنبيهات المتبقية (braces / micromatch / fast-glob / chokidar / tailwindcss / postcss-nested / @next/eslint-plugin-next) **devDependencies فقط** لا تُشحن إلى الإنتاج، وإصلاحها يتطلب Tailwind v4 (تغيير جذري) أو إصدارات ESLint أعلى؛ وهي موثّقة هنا بدل تجاهلها. لا توجد أي تنبيهات في تبعيات التشغيل (`next`, `react`, `react-dom`, `zod`, `lucide-react`, `@fontsource/cairo`).
+
+```bash
+npm audit --omit=dev   # تبعيات التشغيل: 0 vulnerabilities
+npm audit              # devDependencies: التنبيهات المتبقية أعلاه
+```
+
+**ملاحظات:**
+- التطبيق لا يستخدم `next/image` ولا Image Optimization API؛ حزمة `sharp` موجودة كاعتماد اختياري داخل Next ومثبّتة على نسخة مُصحَّحة عبر `overrides` احتياطًا.
+- لتحديث الأمان مستقبلًا: `npm audit --omit=dev` + ترقية خط 15.5 مع إعادة تشغيل `npm test && npm run build`.
 
 ## الخصوصية
 
