@@ -35,9 +35,16 @@ export function parseBackup(text: string): ParseBackupResult {
       ? parsed
       : { app: BACKUP_APP_ID, backupVersion: 1, exportedAt: new Date().toISOString(), data: parsed };
 
-  // النسخ القديمة (data.version = 1) بتمر على نفس ترحيل التخزين قبل التحقق
+  // نسخ v1 القديمة فقط بتمر على ترحيل التخزين قبل التحقق.
+  // ملاحظة: الملفات المشوّهة (بدون version أو بأي شكل تاني) ما بتترحملش —
+  // الترحيل المتسامح مخصوص للبيانات المحلية الموثوقة، مش للملفات من بره.
   const rawData = (candidate as { data?: unknown }).data;
-  if (rawData && typeof rawData === "object") {
+  if (
+    rawData &&
+    typeof rawData === "object" &&
+    !Array.isArray(rawData) &&
+    (rawData as { version?: unknown }).version === 1
+  ) {
     const migrated = migrateRawData(rawData);
     if (!migrated.ok) return { ok: false, message: migrated.message };
     (candidate as { data: unknown }).data = migrated.data;

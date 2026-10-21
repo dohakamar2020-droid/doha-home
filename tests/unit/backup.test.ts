@@ -6,7 +6,7 @@ import {
   serializeBackup,
   summarizeBackup,
 } from "@/lib/backup";
-import { createEmptyData } from "@/lib/defaults";
+import { createEmptyData, DATA_VERSION } from "@/lib/defaults";
 import { addHabit, addTask } from "@/lib/operations";
 
 function sampleData() {
@@ -77,5 +77,46 @@ describe("النسخ الاحتياطي", () => {
 
   it("يسمّي الملف بتاريخ التصدير", () => {
     expect(backupFileName("2026-10-21T10:00:00.000Z")).toBe("bayti-monazam-backup-2026-10-21.json");
+  });
+});
+
+describe("استيراد نسخ قديمة v1", () => {
+  it("نسخة v1 كاملة بترحّل لـ 2 عند الاستيراد", () => {
+    const legacy = {
+      app: "bayti-monazam",
+      backupVersion: 1,
+      exportedAt: "2026-09-01T09:00:00.000Z",
+      data: {
+        version: 1,
+        settings: {
+          displayName: "دعاء",
+          onboardingCompleted: true,
+          visibleSections: ["dashboard", "today", "week", "cleaning", "habits"],
+        },
+        tasks: [],
+        taskCompletions: [],
+        rooms: [],
+        cleaningTasks: [],
+        cleaningCompletions: [],
+        habits: [],
+        habitCompletions: [],
+      },
+    };
+    const result = parseBackup(JSON.stringify(legacy));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.backup.data.version).toBe(DATA_VERSION);
+      expect(result.backup.data.meals.length).toBeGreaterThanOrEqual(21);
+    }
+  });
+
+  it("ملف مشوّه (بدون version) بيترفض كأنه غير صالح", () => {
+    const garbage = {
+      app: "bayti-monazam",
+      hello: "world",
+    };
+    const result = parseBackup(JSON.stringify(garbage));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toContain("غير صالحة");
   });
 });

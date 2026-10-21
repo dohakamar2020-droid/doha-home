@@ -33,7 +33,7 @@
 - **RTL بالكامل** بخط Cairo، تصميم هادي بألوان: sage `#719B83`، cream `#FAF7F2`، soft pink `#F5E5E8`، نص `#28332D`.
 - **Mobile-first**: شريط تنقل سفلي على الموبايل، سايدبار على الديسكتوب، من 320px وفوق.
 - **بدون مزامنة:** البيانات محلية، مع تصدير/استيراد JSON.
-- **اختبارات:** 117 اختبار وحدة/مكوّن بـ Vitest + RTL (14 ملفًا)، و34 حالة Playwright E2E موزّعة على موبايل وديسكتوب.
+- **اختبارات:** 119 اختبار وحدة/مكوّن بـ Vitest + RTL (14 ملفًا)، و34 حالة Playwright E2E موزّعة على موبايل وديسكتوب.
 
 ## التقنيات
 
@@ -266,7 +266,7 @@ type AppData = {
 ## الاختبارات
 
 ```bash
-npm test          # 117 اختبار (Vitest + jsdom + Testing Library)
+npm test          # 119 اختبار (Vitest + jsdom + Testing Library)
 npm run test:e2e  # Playwright: 17 حالة × مشروعين (mobile + desktop)
 ```
 
@@ -280,7 +280,7 @@ npm run test:e2e  # Playwright: 17 حالة × مشروعين (mobile + desktop)
 
 **Playwright (`tests/e2e`):** الإعداد الأول، إضافة/إكمال مهمة، الثبات بعد إعادة التحميل، التنقل بين الأيام، التكرار الأسبوعي، إكمال تنظيف، العادات، تصدير/استيراد النسخة الاحتياطية (بما فيها ملف غير صالح)، والتنقل على الموبايل + فحص عدم وجود تمرير أفقي.
 
-> **شفافية:** آخر تشغيل فعلي في هذه البيئة كان لـ `npm test` (نجحت 117 اختبارًا) و`npm run build` و`npm run lint` و`npm run typecheck`.
+> **شفافية:** آخر تشغيل فعلي في هذه البيئة كان لـ `npm test` (نجحت 119 اختبارًا) و`npm run build` و`npm run lint` و`npm run typecheck`.
 > اختبارات Playwright لم تُشغَّل هنا لأن تنزيل متصفحات Playwright محجوب في بيئة التنفيذ؛ الملفات مكتوبة ومتحقَّق من تحميلها واكتشافها (`npx playwright test --list` → 34 اختبار)، وتُشغَّل عبر `npx playwright install --with-deps chromium && npm run test:e2e` محليًا أو في GitHub Actions.
 
 ## النشر على Vercel
