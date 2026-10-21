@@ -34,7 +34,7 @@ export function buildSeed(options: SeedOptions = {}) {
   const now = isoNow();
   const roomId = "room-kitchen";
   return {
-    version: 1,
+    version: 2,
     settings: {
       displayName: options.displayName ?? "دعاء",
       wakeUpTime: "06:30",
@@ -42,7 +42,8 @@ export function buildSeed(options: SeedOptions = {}) {
       weekStartsOn: 6,
       routineTemplate: "balanced",
       onboardingCompleted: true,
-      visibleSections: ["dashboard", "today", "week", "cleaning", "habits"],
+      visibleSections: ["dashboard", "today", "week", "cleaning", "habits", "meals", "adhkar"],
+      housePlanVersion: 0,
       createdAt: now,
     },
     tasks: options.tasks ?? [],
@@ -66,6 +67,8 @@ export function buildSeed(options: SeedOptions = {}) {
     cleaningCompletions: [],
     habits: options.habits ?? [],
     habitCompletions: options.habitCompletions ?? [],
+    meals: [],
+    adhkarProgress: [],
   };
 }
 

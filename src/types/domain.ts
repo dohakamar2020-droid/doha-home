@@ -1,10 +1,12 @@
 import type { z } from "zod";
 import type {
+  adhkarProgressSchema,
   appDataSchema,
   cleaningCompletionSchema,
   cleaningTaskSchema,
   habitCompletionSchema,
   habitSchema,
+  mealIdeaSchema,
   roomSchema,
   taskCompletionSchema,
   taskSchema,
@@ -67,7 +69,15 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
   high: "عالية",
 };
 
-export const APP_SECTIONS = ["dashboard", "today", "week", "cleaning", "habits"] as const;
+export const APP_SECTIONS = [
+  "dashboard",
+  "today",
+  "week",
+  "cleaning",
+  "habits",
+  "meals",
+  "adhkar",
+] as const;
 export type SectionId = (typeof APP_SECTIONS)[number];
 
 export const SECTION_LABELS: Record<SectionId, string> = {
@@ -76,6 +86,8 @@ export const SECTION_LABELS: Record<SectionId, string> = {
   week: "الأسبوع",
   cleaning: "تنظيف البيت",
   habits: "عاداتي",
+  meals: "غدا الأسبوع",
+  adhkar: "أذكاري",
 };
 
 export const ROUTINE_TEMPLATES = ["calm", "balanced", "busy"] as const;
@@ -108,6 +120,9 @@ export type CleaningTask = z.infer<typeof cleaningTaskSchema>;
 export type CleaningCompletion = z.infer<typeof cleaningCompletionSchema>;
 export type Habit = z.infer<typeof habitSchema>;
 export type HabitCompletion = z.infer<typeof habitCompletionSchema>;
+export type MealIdea = z.infer<typeof mealIdeaSchema>;
+export type AdhkarProgress = z.infer<typeof adhkarProgressSchema>;
+export type AdhkarPeriod = "morning" | "evening";
 export type AppData = z.infer<typeof appDataSchema>;
 
 export type Recurrence = Task["recurrence"];
@@ -140,4 +155,10 @@ export type HabitInput = {
   name: string;
   description?: string;
   weekdays: Weekday[];
+};
+
+export type MealIdeaInput = {
+  weekday: Weekday;
+  title: string;
+  notes?: string;
 };

@@ -1,9 +1,13 @@
 import type { AppData, UserSettings } from "@/types/domain";
 import { APP_SECTIONS } from "@/types/domain";
 import { buildDefaultCleaningTasks, createDefaultRooms } from "@/data/templates";
+import { buildDefaultMeals } from "@/data/meals";
 import { todayIso } from "@/lib/date";
 
-export const APP_VERSION = "1.0.1";
+export const APP_VERSION = "1.1.0";
+
+/** نسخة شكل البيانات المحفوظة */
+export const DATA_VERSION = 2;
 
 export const DEFAULT_SETTINGS: UserSettings = {
   displayName: "",
@@ -13,6 +17,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   routineTemplate: "balanced",
   onboardingCompleted: false,
   visibleSections: [...APP_SECTIONS],
+  housePlanVersion: 0,
 };
 
 /** بيانات مبدئية فاضية مع الغرف الافتراضية ومهام التنظيف الأساسية */
@@ -21,7 +26,7 @@ export function createEmptyData(settings: UserSettings = DEFAULT_SETTINGS): AppD
   const rooms = createDefaultRooms(now);
   const today = todayIso();
   return {
-    version: 1,
+    version: DATA_VERSION,
     settings: { ...settings },
     tasks: [],
     taskCompletions: [],
@@ -30,5 +35,7 @@ export function createEmptyData(settings: UserSettings = DEFAULT_SETTINGS): AppD
     cleaningCompletions: [],
     habits: [],
     habitCompletions: [],
+    meals: buildDefaultMeals(now),
+    adhkarProgress: [],
   };
 }

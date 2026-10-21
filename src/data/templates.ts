@@ -11,6 +11,10 @@ import type {
 } from "@/types/domain";
 import { createId } from "@/lib/id";
 import { weekdayOf } from "@/lib/date";
+import { DEFAULT_ROOMS, createDefaultRooms } from "@/data/rooms";
+import { buildPlanCleaningTasks, buildPlanTasks } from "@/data/housePlan";
+
+export { DEFAULT_ROOMS, createDefaultRooms } from "@/data/rooms";
 
 /**
  * قوالب البداية: تُنشئ مهامًا وعادات ومهام تنظيف قابلة للتعديل بالكامل.
@@ -43,15 +47,6 @@ interface HabitSeed {
 }
 
 const ALL_DAYS: Weekday[] = [0, 1, 2, 3, 4, 5, 6];
-
-export const DEFAULT_ROOMS: ReadonlyArray<{ key: string; name: string; emoji: string }> = [
-  { key: "kitchen", name: "المطبخ", emoji: "🍳" },
-  { key: "bathroom", name: "الحمام", emoji: "🚿" },
-  { key: "bedroom", name: "أوضة النوم", emoji: "🛏️" },
-  { key: "living", name: "الصالة", emoji: "🛋️" },
-  { key: "laundry", name: "الغسيل", emoji: "🧺" },
-  { key: "general", name: "البيت عمومًا", emoji: "🏠" },
-];
 
 const CLEANING_SEEDS: Record<
   string,
@@ -213,16 +208,6 @@ const TASK_SEEDS: Record<RoutineTemplate, TaskSeed[]> = {
   ],
 };
 
-export function createDefaultRooms(now: string = new Date().toISOString()): Room[] {
-  return DEFAULT_ROOMS.map((room, index) => ({
-    id: createId(),
-    name: room.name,
-    emoji: room.emoji,
-    order: index,
-    createdAt: now,
-  }));
-}
-
 export function buildDefaultCleaningTasks(
   rooms: Room[],
   today: IsoDate,
@@ -250,13 +235,19 @@ export function buildDefaultCleaningTasks(
   return tasks;
 }
 
-export function buildStarterBundle(template: RoutineTemplate, today: IsoDate): StarterBundle {
+export function buildStarterBundle(
+  template: RoutineTemplate,
+  today: IsoDate,
+  bedTime = "22:30",
+): StarterBundle {
   const now = new Date().toISOString();
   const rooms = createDefaultRooms(now);
-  const cleaningTasks = buildDefaultCleaningTasks(rooms, today, now);
+  // خطة البيت: ترويق خفيف + تنظيف عميق يومي لأوضة + التلات شامل + غسيل مرتين
+  const cleaningTasks = buildPlanCleaningTasks(rooms, today);
+  const planTasks = buildPlanTasks(today, bedTime);
   const weekday = weekdayOf(today);
 
-  const tasks: Task[] = TASK_SEEDS[template].map((seed) => {
+  const templateTasks: Task[] = TASK_SEEDS[template].map((seed) => {
     const common = {
       id: createId(),
       title: seed.title,
@@ -301,7 +292,7 @@ export function buildStarterBundle(template: RoutineTemplate, today: IsoDate): S
     createdAt: now,
   }));
 
-  return { tasks, rooms, cleaningTasks, habits };
+  return { tasks: [...templateTasks, ...planTasks], rooms, cleaningTasks, habits };
 }
 
 /** مهام تنظيف بسيطة لأي غرفة جديدة يضيفها المستخدم */
