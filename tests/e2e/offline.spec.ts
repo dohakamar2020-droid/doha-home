@@ -1,0 +1,80 @@
+import { expect, test } from "@playwright/test";
+import { seed } from "./helpers";
+
+/**
+ * اختبار PWA حقيقي: تسجيل الـ Service Worker، التخزين المسبق،
+ * والشغل من غير نت بعد أول زيارة (البيانات كلها من localStorage).
+ */
+test.describe("التطبيق أوفلاين (PWA)", () => {
+  test("الـ Service Worker يتسجل والصفحات تتخزن، وبعدها التطبيق يشتغل من غير نت", async ({
+    page,
+    context,
+  }) => {
+    // بيانات مستخدم جاهزة (الإعداد مكتمل) عشان التطبيق ما يحولناش لـ /welcome
+    await seed(page, {});
+    await page.goto("/");
+
+    // 1) الـ SW يتسجل ويبقى active
+    await page.waitForFunction(
+      () => navigator.serviceWorker.ready.then(() => true).catch(() => false),
+      undefined,
+      { timeout: 20000 },
+    );
+
+    // 2) الصفحات الأساسية + ملفات JS بتاعتها تكون متخزنة (من غيرهم مفيش هيدريشن أوفلاين)
+    await page.waitForFunction(
+      async () => {
+        const keys = await caches.keys();
+        const shellKey = keys.find((key) => key.includes("shell"));
+        if (!shellKey) return false;
+        const shell = await caches.open(shellKey);
+        const root = await shell.match("/");
+        const today = await shell.match("/today");
+        if (!root || !today) return false;
+        let hasRouteChunk = false;
+        for (const key of keys) {
+          const cache = await caches.open(key);
+          const requests = await cache.keys();
+          if (requests.some((request) => request.url.includes("/_next/static/chunks/app/"))) {
+            hasRouteChunk = true;
+            break;
+          }
+        }
+        return hasRouteChunk;
+      },
+      undefined,
+      { timeout: 30000 },
+    );
+
+    // 3) المانيفست والأيقونات متاحين
+    expect((await page.request.get("/manifest.webmanifest")).status()).toBe(200);
+    expect((await page.request.get("/icons/icon-192.png")).status()).toBe(200);
+    const manifestJson = await (await page.request.get("/manifest.webmanifest")).json();
+    expect(manifestJson.display).toBe("standalone");
+    expect(manifestJson.name).toContain("بيتي منظم");
+
+    // 4) نقفل النت ونعيد تحميل نفس الصفحة — لازم يشتغل من الكاش
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page).toHaveTitle(/بيتي منظم/);
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+    // 5) نتنقل لصفحة تانية أوفلاين — برضه من الكاش
+    await page.goto("/adhkar");
+    await expect(page.getByRole("heading", { name: /أذكار الصباح والمساء/ })).toBeVisible();
+
+    await context.setOffline(false);
+  });
+
+  test("الصفحة فيها لينك المانيفست وأيقونة apple-touch", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+      "href",
+      "/manifest.webmanifest",
+    );
+    // React بيضيف نسخة تانية من اللينك عند الهيدريشن، فبينكفي وجود اللينك الصح
+    await expect(
+      page.locator('link[rel="apple-touch-icon"][href="/icons/apple-touch-icon.png"]').first(),
+    ).toBeAttached();
+  });
+});
