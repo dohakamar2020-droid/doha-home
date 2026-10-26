@@ -3,7 +3,7 @@
 تطبيق ويب عربي (RTL) لتنظيم يوم البيت: مهام يومية وأسبوعية، جدول تنظيف الغرف، عادات يومية، ونسخ احتياطي محلي.
 كل البيانات تُحفظ في متصفح المستخدمة فقط — بدون سيرفر، بدون قاعدة بيانات، وبدون أي طلبات خارجية.
 
-> **App name:** بيتي منظم (Bayti Monazam) · **Version:** 1.1.0
+> **App name:** بيتي منظم (Bayti Monazam) · **Version:** 1.2.0 (PWA)
 
 ---
 
@@ -33,7 +33,7 @@
 - **RTL بالكامل** بخط Cairo، تصميم هادي بألوان: sage `#719B83`، cream `#FAF7F2`، soft pink `#F5E5E8`، نص `#28332D`.
 - **Mobile-first**: شريط تنقل سفلي على الموبايل، سايدبار على الديسكتوب، من 320px وفوق.
 - **بدون مزامنة:** البيانات محلية، مع تصدير/استيراد JSON.
-- **اختبارات:** 119 اختبار وحدة/مكوّن بـ Vitest + RTL (14 ملفًا)، و34 حالة Playwright E2E موزّعة على موبايل وديسكتوب.
+- **اختبارات:** 126 اختبار وحدة/مكوّن بـ Vitest + RTL (15 ملفًا)، و38 حالة Playwright E2E موزّعة على موبايل وديسكتوب (شاملة اختبار أوفلاين حقيقي للـ PWA).
 
 ## التقنيات
 
@@ -266,7 +266,7 @@ type AppData = {
 ## الاختبارات
 
 ```bash
-npm test          # 119 اختبار (Vitest + jsdom + Testing Library)
+npm test          # 126 اختبار (Vitest + jsdom + Testing Library)
 npm run test:e2e  # Playwright: 17 حالة × مشروعين (mobile + desktop)
 ```
 
@@ -280,7 +280,7 @@ npm run test:e2e  # Playwright: 17 حالة × مشروعين (mobile + desktop)
 
 **Playwright (`tests/e2e`):** الإعداد الأول، إضافة/إكمال مهمة، الثبات بعد إعادة التحميل، التنقل بين الأيام، التكرار الأسبوعي، إكمال تنظيف، العادات، تصدير/استيراد النسخة الاحتياطية (بما فيها ملف غير صالح)، والتنقل على الموبايل + فحص عدم وجود تمرير أفقي.
 
-> **شفافية:** آخر تشغيل فعلي في هذه البيئة كان لـ `npm test` (نجحت 119 اختبارًا) و`npm run build` و`npm run lint` و`npm run typecheck`.
+> **شفافية:** آخر تشغيل فعلي في هذه البيئة كان لـ `npm test` (نجحت 126 اختبارًا) و`npm run build` و`npm run lint` و`npm run typecheck`. اختبار الأوفلاين الحقيقي للـ PWA (Service Worker + `setOffline`) بيشتغل في CI، لأن متصفح Playwright مش متاح محليًا في البيئة دي.
 > اختبارات Playwright لم تُشغَّل هنا لأن تنزيل متصفحات Playwright محجوب في بيئة التنفيذ؛ الملفات مكتوبة ومتحقَّق من تحميلها واكتشافها (`npx playwright test --list` → 34 اختبار)، وتُشغَّل عبر `npx playwright install --with-deps chromium && npm run test:e2e` محليًا أو في GitHub Actions.
 
 ## النشر على Vercel
@@ -300,6 +300,19 @@ npm run test:e2e  # Playwright: 17 حالة × مشروعين (mobile + desktop)
 
 - **quality:** `actions/setup-node@v4` مع Node 22 وذاكرة npm → `npm ci` → `npm run lint` → `npm run typecheck` → `npm test` → `npm run build`.
 - **e2e:** يعتمد على quality → `npx playwright install --with-deps chromium` → `npm run test:e2e` (webServer يبني ويشغّل التطبيق)، ويرفع تقرير Playwright عند الفشل.
+
+## التطبيق على الموبايل (PWA)
+
+التطبيق **PWA كامل**: بينزّل كأيقونة على شاشة الموبايل، بيفتح standalone من غير شريط المتصفح، وبيشتغل **من غير نت** بعد أول زيارة.
+
+- **الأيقونات:** PNG حقيقية (192 و512) + نسخة `maskable` لأندرويد + `apple-touch-icon` للآيفون — متولّدة من الشعار عبر `node scripts/generate-icons.cjs` (sharp).
+- **التثبيت:**
+  - أندرويد/كروم: زر **«نزّلي التطبيق»** في الإعدادات (بيعترض `beforeinstallprompt`)، أو قائمة ⋮ ← تثبيت التطبيق.
+  - آيفون/سفاري: زر المشاركة ← «إضافة إلى الشاشة الرئيسية» — الخطوات ظاهرة كمان في الإعدادات.
+- **الشغل أوفلاين:** `public/sw.js` بيخزّن مسبقًا كل صفحات التطبيق (precache)، وطلبات التنقل: شبكة أولًا ثم كاش ثم الرئيسية كحل أخير؛ ملفات `/_next/static` كاش أولًا (بها hash)؛ باقي الأصول stale-while-revalidate. **مفيش caching لأي طلب غير GET أو من دومين تاني.**
+- **التسجيل:** `ServiceWorkerRegistrar` بيسجّل الـ SW في production بس وبعد تحميل الصفحة — فشله مش بيأثر على التطبيق.
+- **اختبارات:** اختبار وحدة بيضمن إن قائمة الـ precache في `sw.js` مطابقة لمسارات التطبيق (`src/lib/pwa.ts`)، واختبار E2E حقيقي في CI: تسجيل الـ SW ← التأكد من التخزين المسبق ← `setOffline(true)` ← إعادة تحميل وتنقل بين الصفحات أوفلاين.
+- **التحديثات:** تغيير `VERSION` في `public/sw.js` بيفعّل كاش جديد ويمسح القديم (`activate`).
 
 ## الأمان والتبعيات
 

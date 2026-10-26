@@ -4,7 +4,7 @@ import { buildDefaultCleaningTasks, createDefaultRooms } from "@/data/templates"
 import { buildDefaultMeals } from "@/data/meals";
 import { todayIso } from "@/lib/date";
 
-export const APP_VERSION = "1.1.0";
+export const APP_VERSION = "1.2.0";
 
 /** نسخة شكل البيانات المحفوظة */
 export const DATA_VERSION = 2;

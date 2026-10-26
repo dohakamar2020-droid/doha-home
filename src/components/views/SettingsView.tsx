@@ -31,6 +31,7 @@ import type { BackupFile, BackupSummary } from "@/lib/backup";
 import { APP_SECTIONS, SECTION_LABELS, WEEKDAY_LABELS } from "@/types/domain";
 import type { SectionId, Weekday } from "@/types/domain";
 import { orderedWeekdays, todayIso } from "@/lib/date";
+import { InstallAppCard } from "@/components/InstallAppCard";
 import { reapplyHousePlan, updateSettings } from "@/lib/operations";
 import { describeHousePlan } from "@/data/housePlan";
 import { APP_VERSION } from "@/lib/defaults";
@@ -271,6 +272,8 @@ export function SettingsView() {
           رجّعي مهام الخطة الناقصة
         </button>
       </section>
+
+      <InstallAppCard />
 
       <section className="card space-y-4" aria-labelledby="data-title">
         <h2 id="data-title" className="flex items-center gap-2 text-sm font-bold text-ink">
