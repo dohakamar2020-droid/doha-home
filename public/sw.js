@@ -35,15 +35,55 @@ const PRECACHE_FILES = [
   "/icons/apple-touch-icon.png",
 ];
 
+/** استخراج روابط /_next/static (chunks وCSS) من HTML الصفحة */
+function extractAssetUrls(html) {
+  return [...new Set(html.match(/\/_next\/static\/[^"'\s<>\\]+/g) ?? [])];
+}
+
+/** استخراج ملفات الخطوط المذكورة جوه ملفات CSS */
+function extractFontUrls(css) {
+  return [...new Set(css.match(/\/_next\/static\/media\/[^)"'\s\\]+/g) ?? [])];
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const shell = await caches.open(SHELL_CACHE);
-      // addAll ذرّية: لو ملف فشل الكل يفشل — بنستخدم add فردي عشان صفحة واحدة
-      // بايظة ما تمنعش باقي الصفحات من الشغل أوفلاين
+      const assets = await caches.open(ASSETS_CACHE);
+
+      // ملفات ثابتة معروفة
+      await Promise.allSettled(PRECACHE_FILES.map((file) => shell.add(file)));
+
+      // كل صفحة: تخزين الـ HTML + تجميع أصول JS/CSS بتاعتها
+      // (من غيرهم الهيدريشن مش هيخلص أوفلاين والصفحة هتفضل على skeleton)
+      const assetUrls = new Set();
       await Promise.allSettled(
-        [...PRECACHE_ROUTES, ...PRECACHE_FILES].map((route) => shell.add(route)),
+        PRECACHE_ROUTES.map(async (route) => {
+          const response = await fetch(route, { credentials: "same-origin" });
+          if (!response || !response.ok) return;
+          await shell.put(route, response.clone());
+          for (const url of extractAssetUrls(await response.text())) assetUrls.add(url);
+        }),
       );
+
+      // ملفات CSS بتتخزن يدوي + بنطلع الخطوط من جواها
+      const cssUrls = [...assetUrls].filter((url) => url.endsWith(".css"));
+      await Promise.allSettled(
+        cssUrls.map(async (cssUrl) => {
+          const response = await fetch(cssUrl, { credentials: "same-origin" });
+          if (!response || !response.ok) return;
+          await assets.put(cssUrl, response.clone());
+          for (const url of extractFontUrls(await response.text())) assetUrls.add(url);
+        }),
+      );
+
+      // باقي الأصول (JS وwoff2 وغيرهم)
+      await Promise.allSettled(
+        [...assetUrls]
+          .filter((url) => !url.endsWith(".css"))
+          .map((url) => assets.add(url)),
+      );
+
       await self.skipWaiting();
     })(),
   );

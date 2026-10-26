@@ -18,7 +18,7 @@ test.describe("التطبيق أوفلاين (PWA)", () => {
       { timeout: 20000 },
     );
 
-    // 2) الصفحات الأساسية تكون اتخزنت مسبقًا في الكاش
+    // 2) الصفحات الأساسية + ملفات JS بتاعتها تكون متخزنة (من غيرهم مفيش هيدريشن أوفلاين)
     await page.waitForFunction(
       async () => {
         const keys = await caches.keys();
@@ -27,10 +27,20 @@ test.describe("التطبيق أوفلاين (PWA)", () => {
         const shell = await caches.open(shellKey);
         const root = await shell.match("/");
         const today = await shell.match("/today");
-        return Boolean(root && today);
+        if (!root || !today) return false;
+        let hasRouteChunk = false;
+        for (const key of keys) {
+          const cache = await caches.open(key);
+          const requests = await cache.keys();
+          if (requests.some((request) => request.url.includes("/_next/static/chunks/app/"))) {
+            hasRouteChunk = true;
+            break;
+          }
+        }
+        return hasRouteChunk;
       },
       undefined,
-      { timeout: 20000 },
+      { timeout: 30000 },
     );
 
     // 3) المانيفست والأيقونات متاحين
@@ -59,6 +69,9 @@ test.describe("التطبيق أوفلاين (PWA)", () => {
       "href",
       "/manifest.webmanifest",
     );
-    await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(1);
+    // React بيضيف نسخة تانية من اللينك عند الهيدريشن، فبينكفي وجود اللينك الصح
+    await expect(
+      page.locator('link[rel="apple-touch-icon"][href="/icons/apple-touch-icon.png"]').first(),
+    ).toBeAttached();
   });
 });
