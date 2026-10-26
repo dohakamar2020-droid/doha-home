@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { seed } from "./helpers";
 
 /**
  * اختبار PWA حقيقي: تسجيل الـ Service Worker، التخزين المسبق،
@@ -9,6 +10,8 @@ test.describe("التطبيق أوفلاين (PWA)", () => {
     page,
     context,
   }) => {
+    // بيانات مستخدم جاهزة (الإعداد مكتمل) عشان التطبيق ما يحولناش لـ /welcome
+    await seed(page, {});
     await page.goto("/");
 
     // 1) الـ SW يتسجل ويبقى active
